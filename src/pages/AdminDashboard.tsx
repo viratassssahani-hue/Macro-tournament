@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { Shield, Plus, CheckCircle, XCircle, LogOut } from 'lucide-react';
 import { MatchMode, Match } from '../types';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function AdminDashboard() {
   const { 
@@ -14,6 +15,38 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'matches' | 'results' | 'deposits' | 'withdrawals' | 'audit' | 'users'>('matches');
+  
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    variant: 'danger' | 'warning' | 'primary';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'primary'
+  });
+
+  const showConfirm = (
+    title: string, 
+    message: string, 
+    onConfirm: () => void, 
+    variant: 'danger' | 'warning' | 'primary' = 'primary',
+    confirmText: string = 'Confirm'
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      variant,
+      confirmText
+    });
+  };
 
   useEffect(() => {
     if (!isAdminAuthenticated) navigate('/admin');
@@ -57,21 +90,64 @@ export default function AdminDashboard() {
 
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {activeTab === 'matches' && <MatchCreator adminCreateMatch={adminCreateMatch} matches={matches} adminPublishRoom={adminPublishRoom} adminDeleteMatch={adminDeleteMatch} adminUpdateMatchStatus={adminUpdateMatchStatus} />}
-          {activeTab === 'results' && <SpectatorResults matches={matches} adminCreditWinnings={adminCreditWinnings} />}
-          {activeTab === 'deposits' && <PendingDeposits transactions={transactions} approve={adminApproveDeposit} reject={adminRejectDeposit} />}
-          {activeTab === 'withdrawals' && <PendingWithdrawals transactions={transactions} markPaid={adminMarkPaid} />}
-          {activeTab === 'audit' && <UserAudit adminPenalty={adminPenalty} />}
+          {activeTab === 'matches' && (
+            <MatchCreator 
+              adminCreateMatch={adminCreateMatch} 
+              matches={matches} 
+              adminPublishRoom={adminPublishRoom} 
+              adminDeleteMatch={adminDeleteMatch} 
+              adminUpdateMatchStatus={adminUpdateMatchStatus}
+              showConfirm={showConfirm}
+            />
+          )}
+          {activeTab === 'results' && (
+            <SpectatorResults 
+              matches={matches} 
+              adminCreditWinnings={adminCreditWinnings} 
+              showConfirm={showConfirm}
+            />
+          )}
+          {activeTab === 'deposits' && (
+            <PendingDeposits 
+              transactions={transactions} 
+              approve={adminApproveDeposit} 
+              reject={adminRejectDeposit} 
+              showConfirm={showConfirm}
+            />
+          )}
+          {activeTab === 'withdrawals' && (
+            <PendingWithdrawals 
+              transactions={transactions} 
+              markPaid={adminMarkPaid} 
+              showConfirm={showConfirm}
+            />
+          )}
+          {activeTab === 'audit' && (
+            <UserAudit 
+              adminPenalty={adminPenalty} 
+              showConfirm={showConfirm}
+            />
+          )}
           {activeTab === 'users' && <UserList users={users} />}
         </main>
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        confirmVariant={confirmModal.variant}
+      />
     </div>
   );
 }
 
 // --- Sub Components ---
 
-function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDeleteMatch, adminUpdateMatchStatus }: any) {
+function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDeleteMatch, adminUpdateMatchStatus, showConfirm }: any) {
   const [title, setTitle] = useState('');
   const [map, setMap] = useState('Bermuda');
   const [mode, setMode] = useState<MatchMode>('Solo');
@@ -120,18 +196,63 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                 <p className="font-bold">{m.title} ({m.mode})</p>
                 <p className="text-xs text-gray-400">{new Date(m.startTime).toLocaleString()}</p>
               </div>
-              <div className="flex gap-2 w-full md:w-auto">
+              <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <input type="text" placeholder="Room ID" id={`rid-${m.id}`} defaultValue={m.roomId} className="bg-[#121212] border border-white/10 rounded p-2 text-sm w-32" />
                 <input type="text" placeholder="Password" id={`rpwd-${m.id}`} defaultValue={m.roomPassword} className="bg-[#121212] border border-white/10 rounded p-2 text-sm w-32" />
                 <button 
                   onClick={() => {
                     const rid = (document.getElementById(`rid-${m.id}`) as HTMLInputElement).value;
                     const rpwd = (document.getElementById(`rpwd-${m.id}`) as HTMLInputElement).value;
-                    adminPublishRoom(m.id, rid, rpwd);
-                    alert('Published!');
+                    showConfirm(
+                      'Update Credentials',
+                      'Are you sure you want to update the room ID and password for this match?',
+                      () => {
+                        adminPublishRoom(m.id, rid, rpwd);
+                        alert('Published!');
+                      }
+                    );
                   }}
-                  className="bg-white text-black px-4 py-2 rounded text-sm font-bold"
+                  className="bg-white text-black px-4 py-2 rounded text-sm font-bold hover:bg-gray-200"
                 >Save</button>
+                {m.status !== 'cancelled' ? (
+                  <button 
+                    onClick={() => {
+                      showConfirm(
+                        'Pause Match',
+                        'Are you sure you want to PAUSE/CANCEL this match? Users will no longer be able to join.',
+                        () => adminUpdateMatchStatus(m.id, 'cancelled'),
+                        'warning',
+                        'Pause Match'
+                      );
+                    }}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm font-bold"
+                  >Pause</button>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      showConfirm(
+                        'Resume Match',
+                        'Resume this match to upcoming status?',
+                        () => adminUpdateMatchStatus(m.id, 'upcoming'),
+                        'primary',
+                        'Resume'
+                      );
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-bold"
+                  >Resume</button>
+                )}
+                <button 
+                  onClick={() => {
+                    showConfirm(
+                      'Delete Match',
+                      'PERMANENTLY DELETE this match? This action cannot be undone and will remove all participant records.',
+                      () => adminDeleteMatch(m.id),
+                      'danger',
+                      'Delete Forever'
+                    );
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-bold"
+                >Delete</button>
               </div>
             </div>
           ))}
@@ -141,7 +262,7 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
   );
 }
 
-function SpectatorResults({ matches, adminCreditWinnings }: any) {
+function SpectatorResults({ matches, adminCreditWinnings, showConfirm }: any) {
   const [selectedMatch, setSelectedMatch] = useState<string>('');
   
   const match = matches.find((m: Match) => m.id === selectedMatch);
@@ -179,8 +300,14 @@ function SpectatorResults({ matches, adminCreditWinnings }: any) {
                         const kills = Number((document.getElementById(`kills-${p.userId}`) as HTMLInputElement).value);
                         const winnings = (kills * match.perKillReward) + (rank === 1 ? match.booyahBonus : 0);
                         if (winnings > 0) {
-                          adminCreditWinnings(p.userId, winnings, `Winnings: Match ${match.title} (Rank ${rank}, Kills ${kills})`);
-                          alert(`Credited ₹${winnings} to ${p.ign}`);
+                          showConfirm(
+                            'Credit Winnings',
+                            `Are you sure you want to credit ₹${winnings} to ${p.ign} for Rank ${rank} and ${kills} kills?`,
+                            () => {
+                              adminCreditWinnings(p.userId, winnings, `Winnings: Match ${match.title} (Rank ${rank}, Kills ${kills})`);
+                              alert(`Credited ₹${winnings} to ${p.ign}`);
+                            }
+                          );
                         } else {
                           alert(`No winnings calculated (0 kills, no Booyah).`);
                         }
@@ -198,7 +325,7 @@ function SpectatorResults({ matches, adminCreditWinnings }: any) {
   );
 }
 
-function PendingDeposits({ transactions, approve, reject }: any) {
+function PendingDeposits({ transactions, approve, reject, showConfirm }: any) {
   const pending = transactions.filter((t: any) => t.type === 'deposit' && t.status === 'pending');
   return (
     <div className="space-y-4">
@@ -211,11 +338,43 @@ function PendingDeposits({ transactions, approve, reject }: any) {
             <p className="text-xs text-gray-500">User ID: {t.userId} • {new Date(t.timestamp).toLocaleString()}</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { approve(t.id); alert('Approved'); }} className="bg-green-600 hover:bg-green-700 p-2 rounded-lg text-white"><CheckCircle className="h-5 w-5" /></button>
-            <button onClick={() => { 
-              const reason = prompt('Reason for rejection?'); 
-              if(reason) { reject(t.id, reason); alert('Rejected'); } 
-            }} className="bg-red-600 hover:bg-red-700 p-2 rounded-lg text-white"><XCircle className="h-5 w-5" /></button>
+            <button 
+              onClick={() => { 
+                showConfirm(
+                  'Approve Deposit',
+                  `APPROVE deposit of ₹${t.amount} for User ID: ${t.userId}?`,
+                  () => {
+                    approve(t.id, t.userId, t.amount); 
+                    alert('Approved and Balance Updated'); 
+                  },
+                  'primary',
+                  'Approve'
+                );
+              }} 
+              className="bg-green-600 hover:bg-green-700 p-2 rounded-lg text-white transition-colors"
+            >
+              <CheckCircle className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={() => { 
+                const reason = prompt('Reason for rejection?'); 
+                if(reason) { 
+                  showConfirm(
+                    'Reject Deposit',
+                    `Are you sure you want to REJECT this deposit request for ₹${t.amount}? Reason: ${reason}`,
+                    () => { 
+                      reject(t.id, reason); 
+                      alert('Rejected'); 
+                    },
+                    'danger',
+                    'Reject'
+                  );
+                } 
+              }} 
+              className="bg-red-600 hover:bg-red-700 p-2 rounded-lg text-white transition-colors"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
           </div>
         </div>
       ))}
@@ -224,7 +383,7 @@ function PendingDeposits({ transactions, approve, reject }: any) {
   );
 }
 
-function PendingWithdrawals({ transactions, markPaid }: any) {
+function PendingWithdrawals({ transactions, markPaid, showConfirm }: any) {
   const pending = transactions.filter((t: any) => t.type === 'withdrawal' && t.status === 'pending');
   return (
     <div className="space-y-4">
@@ -238,8 +397,19 @@ function PendingWithdrawals({ transactions, markPaid }: any) {
           </div>
           <button onClick={() => { 
             const ref = prompt('Enter Bank Reference/UTR for payment proof:'); 
-            if(ref) { markPaid(t.id, ref); alert('Marked as Paid'); } 
-          }} className="bg-white hover:bg-gray-200 text-black px-4 py-2 rounded-lg font-bold text-sm">
+            if(ref) { 
+              showConfirm(
+                'Mark as Paid',
+                `Mark this withdrawal for ₹${t.amount} as PAID? Bank Ref: ${ref}`,
+                () => { 
+                  markPaid(t.id, ref); 
+                  alert('Marked as Paid'); 
+                },
+                'primary',
+                'Mark Paid'
+              );
+            } 
+          }} className="bg-white hover:bg-gray-200 text-black px-4 py-2 rounded-lg font-bold text-sm transition-colors">
             Mark Paid
           </button>
         </div>
@@ -249,16 +419,24 @@ function PendingWithdrawals({ transactions, markPaid }: any) {
   );
 }
 
-function UserAudit({ adminPenalty }: any) {
+function UserAudit({ adminPenalty, showConfirm }: any) {
   const [uid, setUid] = useState('');
   const [amt, setAmt] = useState(0);
   const [reason, setReason] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    adminPenalty(uid, amt, reason);
-    alert('Penalty/Bonus applied');
-    setUid(''); setAmt(0); setReason('');
+    showConfirm(
+      amt < 0 ? 'Deduct Funds' : 'Add Funds',
+      `Are you sure you want to ${amt < 0 ? 'deduct' : 'credit'} ₹${Math.abs(amt)} ${amt < 0 ? 'from' : 'to'} User ${uid}? Reason: ${reason}`,
+      () => {
+        adminPenalty(uid, amt, reason);
+        alert('Action completed successfully');
+        setUid(''); setAmt(0); setReason('');
+      },
+      amt < 0 ? 'danger' : 'primary',
+      amt < 0 ? 'Deduct' : 'Credit'
+    );
   };
 
   return (

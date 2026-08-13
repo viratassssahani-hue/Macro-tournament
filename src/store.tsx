@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Match, Transaction, LeaderboardEntry } from './types';
+import { User, Match, Transaction, LeaderboardEntry, MatchStatus } from './types';
 import { auth, db } from './firebase';
 import { 
   onAuthStateChanged, 
@@ -18,8 +18,46 @@ import {
   serverTimestamp, 
   updateDoc,
   getDoc,
-  getDocs
+  getDocs,
+  deleteDoc
 } from 'firebase/firestore';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 interface StoreState {
   currentUser: User | null;
@@ -445,10 +483,11 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <StoreContext.Provider value={{
-      currentUser, isAdminAuthenticated, matches, transactions, leaderboard,
+      currentUser, isAdminAuthenticated, matches, transactions, leaderboard, users,
       loginUser, logoutUser, updateUserProfile, loginAdmin, logoutAdmin, joinMatch,
       requestDeposit, requestWithdrawal, adminApproveDeposit, adminRejectDeposit,
-      adminMarkPaid, adminPenalty, adminPublishRoom, adminCreditWinnings, adminCreateMatch
+      adminMarkPaid, adminPenalty, adminPublishRoom, adminCreditWinnings, adminCreateMatch,
+      adminDeleteMatch, adminUpdateMatchStatus
     }}>
       {children}
     </StoreContext.Provider>
