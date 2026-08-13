@@ -34,7 +34,7 @@ service cloud.firestore {
         data.walletBalance is number &&
         data.createdAt is timestamp &&
         (data.get('phone', '') is string && data.get('phone', '').size() <= 20) &&
-        (data.get('avatar', '') is string && data.get('avatar', '').size() <= 200) &&
+        (data.get('avatar', '') is string && data.get('avatar', '').size() <= 500) &&
         (data.get('isAdmin', false) is bool);
     }
 

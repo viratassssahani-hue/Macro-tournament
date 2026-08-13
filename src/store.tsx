@@ -3,7 +3,7 @@ import { User, Match, Transaction, LeaderboardEntry } from './types';
 import { auth, db } from './firebase';
 import { 
   onAuthStateChanged, 
-  signInWithRedirect, 
+  signInWithPopup, 
   GoogleAuthProvider, 
   signOut 
 } from 'firebase/auth';
@@ -152,7 +152,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const loginUser = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (e) {
       console.error(e);
     }
