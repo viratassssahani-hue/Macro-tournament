@@ -140,6 +140,7 @@ export default function AdminDashboard() {
         message={confirmModal.message}
         confirmText={confirmModal.confirmText}
         confirmVariant={confirmModal.variant}
+        isLoading={!!isProcessing}
       />
     </div>
   );
@@ -209,7 +210,11 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
             <div key={m.id} className="flex flex-col md:flex-row items-center gap-4 bg-[#0A0A0A] border border-white/10 p-4 rounded-lg">
               <div className="flex-1">
                 <p className="font-bold">{m.title} ({m.mode})</p>
-                <p className="text-xs text-gray-400">{new Date(m.startTime).toLocaleString()}</p>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <span>{new Date(m.startTime).toLocaleString()}</span>
+                  <span>•</span>
+                  <span className="font-mono bg-white/5 px-1 rounded text-[10px]">{m.id}</span>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <input type="text" placeholder="Room ID" id={`rid-${m.id}`} defaultValue={m.roomId} className="bg-[#121212] border border-white/10 rounded p-2 text-sm w-32" />
@@ -227,6 +232,8 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                         try {
                           await adminPublishRoom(m.id, rid, rpwd);
                           alert('Published!');
+                        } catch (err: any) {
+                          alert(`Error: ${err.message}`);
                         } finally {
                           setIsProcessing(null);
                         }
@@ -247,6 +254,8 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                           try {
                             await adminUpdateMatchStatus(m.id, 'cancelled');
                             alert('Match paused!');
+                          } catch (err: any) {
+                            alert(`Error: ${err.message}`);
                           } finally {
                             setIsProcessing(null);
                           }
@@ -269,6 +278,8 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                           try {
                             await adminUpdateMatchStatus(m.id, 'upcoming');
                             alert('Match resumed!');
+                          } catch (err: any) {
+                            alert(`Error: ${err.message}`);
                           } finally {
                             setIsProcessing(null);
                           }
@@ -291,6 +302,8 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                         try {
                           await adminDeleteMatch(m.id);
                           alert('Match deleted!');
+                        } catch (err: any) {
+                          alert(`Error: ${err.message}`);
                         } finally {
                           setIsProcessing(null);
                         }

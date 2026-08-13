@@ -10,6 +10,7 @@ interface ConfirmationModalProps {
   message: string;
   confirmText?: string;
   confirmVariant?: 'danger' | 'warning' | 'primary';
+  isLoading?: boolean;
 }
 
 export default function ConfirmationModal({
@@ -19,7 +20,8 @@ export default function ConfirmationModal({
   title,
   message,
   confirmText = 'Confirm',
-  confirmVariant = 'primary'
+  confirmVariant = 'primary',
+  isLoading = false
 }: ConfirmationModalProps) {
   if (!isOpen) return null;
 
@@ -65,6 +67,7 @@ export default function ConfirmationModal({
                 Cancel
               </button>
               <button
+                disabled={isLoading}
                 onClick={async () => {
                   try {
                     await onConfirm();
@@ -72,9 +75,14 @@ export default function ConfirmationModal({
                     onClose();
                   }
                 }}
-                className={`flex-1 px-4 py-2 rounded-lg text-white font-bold transition-colors ${variantStyles[confirmVariant]}`}
+                className={`flex-1 px-4 py-2 rounded-lg text-white font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${variantStyles[confirmVariant]}`}
               >
-                {confirmText}
+                {isLoading ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : confirmText}
               </button>
             </div>
           </motion.div>

@@ -367,7 +367,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const adminApproveDeposit = async (transactionId: string, userId: string, amount: number) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
       const currentBalance = userDoc.data()?.walletBalance || 0;
@@ -379,13 +379,14 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       await updateDoc(doc(db, 'transactions', transactionId), {
         status: 'approved'
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      throw new Error(e.message || 'Failed to approve');
     }
   };
 
   const adminRejectDeposit = async (transactionId: string, reason: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       await updateDoc(doc(db, 'transactions', transactionId), {
         status: 'rejected',
@@ -397,7 +398,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const adminMarkPaid = async (transactionId: string, ref: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       await updateDoc(doc(db, 'transactions', transactionId), {
         status: 'paid',
@@ -409,7 +410,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const adminPenalty = async (userId: string, amount: number, reason: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
       const currentBalance = userDoc.data()?.walletBalance || 0;
@@ -433,7 +434,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const adminPublishRoom = async (matchId: string, roomId: string, password: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       await updateDoc(doc(db, 'matches', matchId), {
         roomId,
@@ -445,7 +446,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const adminCreditWinnings = async (userId: string, amount: number, reason: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
       const currentBalance = userDoc.data()?.walletBalance || 0;
@@ -470,25 +471,27 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
 
 
   const adminDeleteMatch = async (matchId: string) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       await deleteDoc(doc(db, 'matches', matchId));
-    } catch (error) {
+    } catch (error: any) {
       handleFirestoreError(error, OperationType.DELETE, `matches/${matchId}`);
+      throw new Error(error.message || 'Delete failed');
     }
   };
 
   const adminUpdateMatchStatus = async (matchId: string, status: MatchStatus) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       await updateDoc(doc(db, 'matches', matchId), { status });
-    } catch (error) {
+    } catch (error: any) {
       handleFirestoreError(error, OperationType.UPDATE, `matches/${matchId}/status`);
+      throw new Error(error.message || 'Update failed');
     }
   };
 
   const adminCreateMatch = async (matchData: Omit<Match, 'id' | 'status' | 'joinedSeats' | 'participants'>) => {
-    if (!isAdminAuthenticated) return;
+    if (!isAdminAuthenticated) throw new Error('Unauthorized');
     try {
       const matchId = `m${Date.now()}`;
       await setDoc(doc(db, 'matches', matchId), {
@@ -504,8 +507,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         status: 'upcoming',
         createdAt: serverTimestamp()
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      throw new Error(e.message || 'Failed to create match');
     }
   };
 
