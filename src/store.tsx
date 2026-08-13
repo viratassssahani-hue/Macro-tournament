@@ -252,7 +252,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         sessionStorage.setItem('isAdminAuthenticated', 'true');
         return true;
       } catch (e) {
-        console.error(e);
+        console.error('Admin elevation failed:', e);
         return false;
       }
     }

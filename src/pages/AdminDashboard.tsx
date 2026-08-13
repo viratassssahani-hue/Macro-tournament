@@ -155,14 +155,23 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
   const [perKill, setPerKill] = useState(10);
   const [booyah, setBooyah] = useState(100);
   const [time, setTime] = useState('');
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    adminCreateMatch({
-      title, map, mode, entryFee: fee, perKillReward: perKill, booyahBonus: booyah,
-      totalSeats: 48, startTime: new Date(time).toISOString()
-    });
-    alert('Match created!');
+    setIsProcessing('create');
+    try {
+      await adminCreateMatch({
+        title, map, mode, entryFee: fee, perKillReward: perKill, booyahBonus: booyah,
+        totalSeats: 48, startTime: new Date(time).toISOString()
+      });
+      alert('Match created!');
+      setTitle(''); setTime('');
+    } catch (err) {
+      alert('Failed to create match. Check console for details.');
+    } finally {
+      setIsProcessing(null);
+    }
   };
 
   return (
@@ -183,7 +192,13 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
           <input type="number" placeholder="Entry Fee" required value={fee} onChange={e=>setFee(Number(e.target.value))} className="bg-[#0A0A0A] border border-white/10 rounded-lg p-2 text-white" />
           <input type="number" placeholder="Per Kill Reward" required value={perKill} onChange={e=>setPerKill(Number(e.target.value))} className="bg-[#0A0A0A] border border-white/10 rounded-lg p-2 text-white" />
           <input type="number" placeholder="BOOYAH Bonus" required value={booyah} onChange={e=>setBooyah(Number(e.target.value))} className="bg-[#0A0A0A] border border-white/10 rounded-lg p-2 text-white" />
-          <button type="submit" className="md:col-span-2 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700">Create Match</button>
+          <button 
+            type="submit" 
+            disabled={isProcessing === 'create'}
+            className="md:col-span-2 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isProcessing === 'create' ? 'Creating...' : 'Create Match'}
+          </button>
         </form>
       </div>
 
@@ -200,59 +215,92 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                 <input type="text" placeholder="Room ID" id={`rid-${m.id}`} defaultValue={m.roomId} className="bg-[#121212] border border-white/10 rounded p-2 text-sm w-32" />
                 <input type="text" placeholder="Password" id={`rpwd-${m.id}`} defaultValue={m.roomPassword} className="bg-[#121212] border border-white/10 rounded p-2 text-sm w-32" />
                 <button 
+                  disabled={!!isProcessing}
                   onClick={() => {
                     const rid = (document.getElementById(`rid-${m.id}`) as HTMLInputElement).value;
                     const rpwd = (document.getElementById(`rpwd-${m.id}`) as HTMLInputElement).value;
                     showConfirm(
                       'Update Credentials',
                       'Are you sure you want to update the room ID and password for this match?',
-                      () => {
-                        adminPublishRoom(m.id, rid, rpwd);
-                        alert('Published!');
+                      async () => {
+                        setIsProcessing(m.id);
+                        try {
+                          await adminPublishRoom(m.id, rid, rpwd);
+                          alert('Published!');
+                        } finally {
+                          setIsProcessing(null);
+                        }
                       }
                     );
                   }}
-                  className="bg-white text-black px-4 py-2 rounded text-sm font-bold hover:bg-gray-200"
+                  className="bg-white text-black px-4 py-2 rounded text-sm font-bold hover:bg-gray-200 disabled:opacity-50"
                 >Save</button>
                 {m.status !== 'cancelled' ? (
                   <button 
+                    disabled={!!isProcessing}
                     onClick={() => {
                       showConfirm(
                         'Pause Match',
                         'Are you sure you want to PAUSE/CANCEL this match? Users will no longer be able to join.',
-                        () => adminUpdateMatchStatus(m.id, 'cancelled').then(() => alert('Match paused!')),
+                        async () => {
+                          setIsProcessing(m.id);
+                          try {
+                            await adminUpdateMatchStatus(m.id, 'cancelled');
+                            alert('Match paused!');
+                          } finally {
+                            setIsProcessing(null);
+                          }
+                        },
                         'warning',
                         'Pause Match'
                       );
                     }}
-                    className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm font-bold"
-                  >Pause</button>
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm font-bold disabled:opacity-50"
+                  >{isProcessing === m.id ? '...' : 'Pause'}</button>
                 ) : (
                   <button 
+                    disabled={!!isProcessing}
                     onClick={() => {
                       showConfirm(
                         'Resume Match',
                         'Resume this match to upcoming status?',
-                        () => adminUpdateMatchStatus(m.id, 'upcoming').then(() => alert('Match resumed!')),
+                        async () => {
+                          setIsProcessing(m.id);
+                          try {
+                            await adminUpdateMatchStatus(m.id, 'upcoming');
+                            alert('Match resumed!');
+                          } finally {
+                            setIsProcessing(null);
+                          }
+                        },
                         'primary',
                         'Resume'
                       );
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-bold"
-                  >Resume</button>
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-bold disabled:opacity-50"
+                  >{isProcessing === m.id ? '...' : 'Resume'}</button>
                 )}
                 <button 
+                  disabled={!!isProcessing}
                   onClick={() => {
                     showConfirm(
                       'Delete Match',
                       'PERMANENTLY DELETE this match? This action cannot be undone and will remove all participant records.',
-                      () => adminDeleteMatch(m.id).then(() => alert('Match deleted!')),
+                      async () => {
+                        setIsProcessing(m.id);
+                        try {
+                          await adminDeleteMatch(m.id);
+                          alert('Match deleted!');
+                        } finally {
+                          setIsProcessing(null);
+                        }
+                      },
                       'danger',
                       'Delete Forever'
                     );
                   }}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-bold"
-                >Delete</button>
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-bold disabled:opacity-50"
+                >{isProcessing === m.id ? '...' : 'Delete'}</button>
               </div>
             </div>
           ))}
