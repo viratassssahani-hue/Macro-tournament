@@ -254,13 +254,21 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     try {
       const matchDoc = doc(db, 'matches', matchId);
       const matchSnap = await getDoc(matchDoc);
+      if (!matchSnap.exists()) throw new Error('Match not found');
+      
       const joinedSeats = matchSnap.data()?.joinedSeats || 0;
+      const totalSeats = matchSnap.data()?.totalSeats || 0;
+      
+      if (joinedSeats + participantInputs.length > totalSeats) {
+        throw new Error('Not enough seats available');
+      }
 
-      // Ideally this would be a batch/transaction, simulating for simplicity given rules structure
+      // Update user balance
       await updateDoc(doc(db, 'users', currentUser.id), {
         walletBalance: currentUser.walletBalance - entryFee
       });
 
+      // Create transaction
       const txId = `t${Date.now()}`;
       await setDoc(doc(db, 'transactions', txId), {
         userId: currentUser.id,
@@ -268,16 +276,19 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         amount: entryFee,
         status: 'approved',
         timestamp: new Date().toISOString(),
-        reason: `Entry fee for Match`
+        reason: `Entry fee for Match: ${matchSnap.data()?.title}`
       });
 
+      // Update match seats
       await updateDoc(matchDoc, {
         joinedSeats: joinedSeats + participantInputs.length
       });
 
+      // Create participants
       for (let i = 0; i < participantInputs.length; i++) {
         const p = participantInputs[i];
-        const participantId = i === 0 ? currentUser.id : `mock-${p.uid}`;
+        // Ensure participant ID is unique and valid for the match
+        const participantId = i === 0 ? currentUser.id : `t${currentUser.id.slice(0, 5)}-${p.uid}`;
         await setDoc(doc(db, 'matches', matchId, 'participants', participantId), {
           userId: i === 0 ? currentUser.id : participantId,
           ign: p.ign,
@@ -288,7 +299,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       }
       return true;
     } catch (e) {
-      console.error(e);
+      console.error('Join match failed:', e);
+      handleFirestoreError(e, OperationType.WRITE, `matches/${matchId}/join`);
       return false;
     }
   };
@@ -443,10 +455,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const adminDeleteMatch = async (matchId: string) => {
     if (!isAdminAuthenticated) return;
     try {
-      // Need to delete participants collection first if there are any, but relying on cascade or ignoring
       await deleteDoc(doc(db, 'matches', matchId));
     } catch (error) {
-      console.error("Error deleting match:", error);
+      handleFirestoreError(error, OperationType.DELETE, `matches/${matchId}`);
     }
   };
 
@@ -455,7 +466,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     try {
       await updateDoc(doc(db, 'matches', matchId), { status });
     } catch (error) {
-      console.error("Error updating match status:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `matches/${matchId}/status`);
     }
   };
 

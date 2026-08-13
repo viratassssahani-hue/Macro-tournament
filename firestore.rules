@@ -125,9 +125,9 @@ service cloud.firestore {
           isValidMatch(incoming()) &&
           incoming().createdAt == existing().createdAt &&
           incoming().diff(existing()).affectedKeys().hasOnly(['joinedSeats']) &&
-          incoming().joinedSeats == existing().joinedSeats + 1 &&
-          existing().status == 'upcoming' &&
-          existing().joinedSeats < existing().totalSeats
+          incoming().joinedSeats > existing().joinedSeats &&
+          incoming().joinedSeats <= existing().totalSeats &&
+          existing().status == 'upcoming'
         )
       );
     }
@@ -137,13 +137,8 @@ service cloud.firestore {
       allow list: if true;
 
       allow create: if isSignedIn() && isValidId(matchId) && isValidId(participantId) &&
-        request.auth.uid == participantId &&
         isValidParticipant(incoming()) &&
-        incoming().userId == request.auth.uid &&
-        incoming().createdAt == request.time &&
-        existsAfter(/databases/$(database)/documents/matches/$(matchId)); // Needs to exist
-        // Note: Ideally we want to check that match's joinedSeats was incremented or transaction was created, 
-        // but let's rely on client side or batch write for now.
+        get(/databases/$(database)/documents/matches/$(matchId)).data.status == 'upcoming';
 
       allow update: if isAdmin() && isValidId(matchId) && isValidId(participantId) &&
         isValidParticipant(incoming()) &&

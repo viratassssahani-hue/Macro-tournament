@@ -24,7 +24,7 @@ export default function MatchDetails() {
   const now = new Date().getTime();
   const showRoomDetails = isJoined && (startTime - now <= 10 * 60 * 1000);
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       navigate('/login');
@@ -37,12 +37,12 @@ export default function MatchDetails() {
        participants.push(teammates[i]);
     }
     
-    const success = joinMatch(match.id, participants);
+    setJoining(true);
+    const success = await joinMatch(match.id, participants, match.entryFee);
+    setJoining(false);
+    
     if (!success) {
-      alert('Insufficient wallet balance to join!');
-      navigate('/wallet');
-    } else {
-      setJoining(false);
+      alert('Action failed. Ensure you have sufficient balance and the match has available slots.');
     }
   };
 

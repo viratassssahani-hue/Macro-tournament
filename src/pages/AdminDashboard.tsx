@@ -220,7 +220,7 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                       showConfirm(
                         'Pause Match',
                         'Are you sure you want to PAUSE/CANCEL this match? Users will no longer be able to join.',
-                        () => adminUpdateMatchStatus(m.id, 'cancelled'),
+                        () => adminUpdateMatchStatus(m.id, 'cancelled').then(() => alert('Match paused!')),
                         'warning',
                         'Pause Match'
                       );
@@ -233,7 +233,7 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                       showConfirm(
                         'Resume Match',
                         'Resume this match to upcoming status?',
-                        () => adminUpdateMatchStatus(m.id, 'upcoming'),
+                        () => adminUpdateMatchStatus(m.id, 'upcoming').then(() => alert('Match resumed!')),
                         'primary',
                         'Resume'
                       );
@@ -246,7 +246,7 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
                     showConfirm(
                       'Delete Match',
                       'PERMANENTLY DELETE this match? This action cannot be undone and will remove all participant records.',
-                      () => adminDeleteMatch(m.id),
+                      () => adminDeleteMatch(m.id).then(() => alert('Match deleted!')),
                       'danger',
                       'Delete Forever'
                     );
