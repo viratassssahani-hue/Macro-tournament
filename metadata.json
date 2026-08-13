@@ -1,0 +1,6 @@
+{
+  "name": "Esports Arena",
+  "description": "A premium Free Fire tournament platform with real-time slot booking and automatic payout calculations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "Esports Arena",
+  "short_name": "Arena",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#121212",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=EsportsArena",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=EsportsArena",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

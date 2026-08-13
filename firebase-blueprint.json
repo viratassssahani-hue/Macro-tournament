@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User profile data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "ign": { "type": "string", "maxLength": 50 },
+        "uid": { "type": "string", "maxLength": 50 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "walletBalance": { "type": "number" },
+        "avatar": { "type": "string", "maxLength": 200 },
+        "isAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "ign", "uid", "walletBalance", "createdAt"]
+    },
+    "match": {
+      "title": "Match",
+      "description": "A game match",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 100 },
+        "map": { "type": "string", "maxLength": 50 },
+        "mode": { "type": "string", "enum": ["Solo", "Duo", "Squad"] },
+        "startTime": { "type": "string", "maxLength": 30 },
+        "entryFee": { "type": "number" },
+        "perKillReward": { "type": "number" },
+        "booyahBonus": { "type": "number" },
+        "totalSeats": { "type": "number" },
+        "joinedSeats": { "type": "number" },
+        "status": { "type": "string", "enum": ["upcoming", "live", "completed"] },
+        "roomId": { "type": "string", "maxLength": 50 },
+        "roomPassword": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["title", "map", "mode", "startTime", "entryFee", "perKillReward", "booyahBonus", "totalSeats", "joinedSeats", "status", "createdAt"]
+    },
+    "participant": {
+      "title": "Participant",
+      "description": "A participant in a match",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "ign": { "type": "string", "maxLength": 50 },
+        "uid": { "type": "string", "maxLength": 50 },
+        "slotNumber": { "type": "number" },
+        "teamId": { "type": "string", "maxLength": 50 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "ign", "uid", "slotNumber", "createdAt"]
+    },
+    "transaction": {
+      "title": "Transaction",
+      "description": "A wallet transaction",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["deposit", "withdrawal", "entry_fee", "winnings", "penalty"] },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "paid"] },
+        "reference": { "type": "string", "maxLength": 100 },
+        "timestamp": { "type": "string" },
+        "reason": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["userId", "type", "amount", "status", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/user" },
+      "description": "Stores user profiles"
+    },
+    "/matches/{matchId}": {
+      "schema": { "$ref": "#/entities/match" },
+      "description": "Stores all matches"
+    },
+    "/matches/{matchId}/participants/{participantId}": {
+      "schema": { "$ref": "#/entities/participant" },
+      "description": "Stores participants registered for a match"
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/transaction" },
+      "description": "Stores wallet transactions"
+    }
+  }
+}

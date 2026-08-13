@@ -1,0 +1,179 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
+    }
+
+    // --- Entity Validation ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'ign', 'uid', 'walletBalance', 'createdAt']) &&
+        data.name is string && data.name.size() <= 100 &&
+        data.ign is string && data.ign.size() <= 50 &&
+        data.uid is string && data.uid.size() <= 50 &&
+        data.walletBalance is number &&
+        data.createdAt is timestamp &&
+        (data.get('phone', '') is string && data.get('phone', '').size() <= 20) &&
+        (data.get('avatar', '') is string && data.get('avatar', '').size() <= 200) &&
+        (data.get('isAdmin', false) is bool);
+    }
+
+    function isValidMatch(data) {
+      return data.keys().hasAll(['title', 'map', 'mode', 'startTime', 'entryFee', 'perKillReward', 'booyahBonus', 'totalSeats', 'joinedSeats', 'status', 'createdAt']) &&
+        data.title is string && data.title.size() <= 100 &&
+        data.map is string && data.map.size() <= 50 &&
+        data.mode in ['Solo', 'Duo', 'Squad'] &&
+        data.startTime is string && data.startTime.size() <= 30 &&
+        data.entryFee is number &&
+        data.perKillReward is number &&
+        data.booyahBonus is number &&
+        data.totalSeats is number &&
+        data.joinedSeats is number &&
+        data.status in ['upcoming', 'live', 'completed'] &&
+        data.createdAt is timestamp &&
+        (data.get('roomId', '') is string && data.get('roomId', '').size() <= 50) &&
+        (data.get('roomPassword', '') is string && data.get('roomPassword', '').size() <= 50);
+    }
+
+    function isValidParticipant(data) {
+      return data.keys().hasAll(['userId', 'ign', 'uid', 'slotNumber', 'createdAt']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.ign is string && data.ign.size() <= 50 &&
+        data.uid is string && data.uid.size() <= 50 &&
+        data.slotNumber is number &&
+        data.createdAt is timestamp &&
+        (data.get('teamId', '') is string && data.get('teamId', '').size() <= 50);
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'type', 'amount', 'status', 'timestamp']) &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.type in ['deposit', 'withdrawal', 'entry_fee', 'winnings', 'penalty'] &&
+        data.amount is number &&
+        data.status in ['pending', 'approved', 'rejected', 'paid'] &&
+        data.timestamp is string && data.timestamp.size() <= 30 &&
+        (data.get('reference', '') is string && data.get('reference', '').size() <= 100) &&
+        (data.get('reason', '') is string && data.get('reason', '').size() <= 200);
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn() && isValidId(userId) && request.auth.uid == userId &&
+        isValidUser(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().walletBalance == 0 &&
+        incoming().isAdmin == false;
+      
+      allow update: if isSignedIn() && isValidId(userId) && (
+        (
+          request.auth.uid == userId && 
+          isValidUser(incoming()) && 
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'ign', 'uid', 'phone', 'avatar', 'isAdmin']) &&
+          incoming().walletBalance == existing().walletBalance &&
+          incoming().createdAt == existing().createdAt
+        ) ||
+        (
+          isAdmin() &&
+          isValidUser(incoming()) &&
+          incoming().createdAt == existing().createdAt
+        )
+      );
+    }
+
+    match /matches/{matchId} {
+      allow get: if true;
+      allow list: if true;
+      
+      allow create: if isAdmin() && isValidId(matchId) &&
+        isValidMatch(incoming()) &&
+        incoming().createdAt == request.time;
+      
+      allow update: if isValidId(matchId) && (
+        (
+          isAdmin() &&
+          isValidMatch(incoming()) &&
+          incoming().createdAt == existing().createdAt
+        ) ||
+        (
+          // Allow users to update joinedSeats when joining
+          isSignedIn() && !isAdmin() &&
+          isValidMatch(incoming()) &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['joinedSeats']) &&
+          incoming().joinedSeats == existing().joinedSeats + 1 &&
+          existing().status == 'upcoming' &&
+          existing().joinedSeats < existing().totalSeats
+        )
+      );
+    }
+
+    match /matches/{matchId}/participants/{participantId} {
+      allow get: if true;
+      allow list: if true;
+
+      allow create: if isSignedIn() && isValidId(matchId) && isValidId(participantId) &&
+        request.auth.uid == participantId &&
+        isValidParticipant(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        existsAfter(/databases/$(database)/documents/matches/$(matchId)); // Needs to exist
+        // Note: Ideally we want to check that match's joinedSeats was incremented or transaction was created, 
+        // but let's rely on client side or batch write for now.
+
+      allow update: if isAdmin() && isValidId(matchId) && isValidId(participantId) &&
+        isValidParticipant(incoming()) &&
+        incoming().createdAt == existing().createdAt;
+      
+      allow delete: if isAdmin() && isValidId(matchId) && isValidId(participantId);
+    }
+
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && isValidId(transactionId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() && isValidId(transactionId) &&
+        isValidTransaction(incoming()) &&
+        (
+          (
+            request.auth.uid == incoming().userId &&
+            incoming().type in ['deposit', 'withdrawal', 'entry_fee'] &&
+            (
+              (incoming().type == 'deposit' && incoming().status == 'pending') ||
+              (incoming().type == 'withdrawal' && incoming().status == 'pending') ||
+              (incoming().type == 'entry_fee' && incoming().status == 'approved')
+            )
+          ) ||
+          (
+            isAdmin()
+          )
+        );
+
+      allow update: if isAdmin() && isValidId(transactionId) &&
+        isValidTransaction(incoming());
+    }
+  }
+}
