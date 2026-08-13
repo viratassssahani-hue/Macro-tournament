@@ -65,9 +65,12 @@ export default function ConfirmationModal({
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  onConfirm();
-                  onClose();
+                onClick={async () => {
+                  try {
+                    await onConfirm();
+                  } finally {
+                    onClose();
+                  }
                 }}
                 className={`flex-1 px-4 py-2 rounded-lg text-white font-bold transition-colors ${variantStyles[confirmVariant]}`}
               >

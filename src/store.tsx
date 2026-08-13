@@ -104,7 +104,24 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         const userDoc = doc(db, 'users', user.uid);
         const unsubscribeUser = onSnapshot(userDoc, (snapshot) => {
           if (snapshot.exists()) {
-            setCurrentUser({ id: snapshot.id, ...snapshot.data() } as User);
+            const data = snapshot.data();
+            const balance = Number(data.walletBalance);
+            
+            if (isNaN(balance)) {
+              // Auto-heal NaN balance in Firestore
+              updateDoc(userDoc, { walletBalance: 0 });
+              setCurrentUser({ 
+                id: snapshot.id, 
+                ...data,
+                walletBalance: 0
+              } as User);
+            } else {
+              setCurrentUser({ 
+                id: snapshot.id, 
+                ...data,
+                walletBalance: balance
+              } as User);
+            }
           } else {
             // Create user
             const newUser: User = {
