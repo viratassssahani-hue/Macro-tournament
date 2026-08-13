@@ -55,11 +55,13 @@ export default function MatchDetails() {
     }
     
     setJoining(true);
-    const success = await joinMatch(match.id, participants, match.entryFee);
-    setJoining(false);
-    
-    if (!success) {
-      alert('Action failed. Ensure you have sufficient balance and the match has available slots.');
+    try {
+      await joinMatch(match.id, participants, match.entryFee);
+      alert('Registration successful! Check your match credentials 10 mins before start.');
+    } catch (err: any) {
+      alert(err.message || 'Registration failed');
+    } finally {
+      setJoining(false);
     }
   };
 

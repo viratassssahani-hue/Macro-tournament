@@ -374,9 +374,16 @@ function SpectatorResults({ matches, adminCreditWinnings, showConfirm, isProcess
                           showConfirm(
                             'Credit Winnings',
                             `Are you sure you want to credit ₹${winnings} to ${p.ign} for Rank ${rank} and ${kills} kills?`,
-                            () => {
-                              adminCreditWinnings(p.userId, winnings, `Winnings: Match ${match.title} (Rank ${rank}, Kills ${kills})`);
-                              alert(`Credited ₹${winnings} to ${p.ign}`);
+                            async () => {
+                              try {
+                                setIsProcessing(match.id);
+                                await adminCreditWinnings(p.userId, winnings, `Winnings: Match ${match.title} (Rank ${rank}, Kills ${kills})`);
+                                alert(`Credited ₹${winnings} to ${p.ign}`);
+                              } catch (err: any) {
+                                alert(`Error: ${err.message}`);
+                              } finally {
+                                setIsProcessing(null);
+                              }
                             }
                           );
                         } else {
@@ -414,9 +421,16 @@ function PendingDeposits({ transactions, approve, reject, showConfirm, isProcess
                 showConfirm(
                   'Approve Deposit',
                   `APPROVE deposit of ₹${t.amount} for User ID: ${t.userId}?`,
-                  () => {
-                    approve(t.id, t.userId, t.amount); 
-                    alert('Approved and Balance Updated'); 
+                  async () => {
+                    try {
+                      setIsProcessing(t.id);
+                      await approve(t.id, t.userId, t.amount); 
+                      alert('Approved and Balance Updated'); 
+                    } catch (err: any) {
+                      alert(`Error: ${err.message}`);
+                    } finally {
+                      setIsProcessing(null);
+                    }
                   },
                   'primary',
                   'Approve'
@@ -433,9 +447,16 @@ function PendingDeposits({ transactions, approve, reject, showConfirm, isProcess
                   showConfirm(
                     'Reject Deposit',
                     `Are you sure you want to REJECT this deposit request for ₹${t.amount}? Reason: ${reason}`,
-                    () => { 
-                      reject(t.id, reason); 
-                      alert('Rejected'); 
+                    async () => { 
+                      try {
+                        setIsProcessing(t.id);
+                        await reject(t.id, reason); 
+                        alert('Rejected'); 
+                      } catch (err: any) {
+                        alert(`Error: ${err.message}`);
+                      } finally {
+                        setIsProcessing(null);
+                      }
                     },
                     'danger',
                     'Reject'
@@ -472,9 +493,16 @@ function PendingWithdrawals({ transactions, markPaid, showConfirm, isProcessing,
               showConfirm(
                 'Mark as Paid',
                 `Mark this withdrawal for ₹${t.amount} as PAID? Bank Ref: ${ref}`,
-                () => { 
-                  markPaid(t.id, ref); 
-                  alert('Marked as Paid'); 
+                async () => { 
+                  try {
+                    setIsProcessing(t.id);
+                    await markPaid(t.id, ref); 
+                    alert('Marked as Paid'); 
+                  } catch (err: any) {
+                    alert(`Error: ${err.message}`);
+                  } finally {
+                    setIsProcessing(null);
+                  }
                 },
                 'primary',
                 'Mark Paid'
@@ -500,10 +528,17 @@ function UserAudit({ adminPenalty, showConfirm, isProcessing, setIsProcessing }:
     showConfirm(
       amt < 0 ? 'Deduct Funds' : 'Add Funds',
       `Are you sure you want to ${amt < 0 ? 'deduct' : 'credit'} ₹${Math.abs(amt)} ${amt < 0 ? 'from' : 'to'} User ${uid}? Reason: ${reason}`,
-      () => {
-        adminPenalty(uid, amt, reason);
-        alert('Action completed successfully');
-        setUid(''); setAmt(0); setReason('');
+      async () => {
+        try {
+          setIsProcessing('penalty');
+          await adminPenalty(uid, amt, reason);
+          alert('Action completed successfully');
+          setUid(''); setAmt(0); setReason('');
+        } catch (err: any) {
+          alert(`Error: ${err.message}`);
+        } finally {
+          setIsProcessing(null);
+        }
       },
       amt < 0 ? 'danger' : 'primary',
       amt < 0 ? 'Deduct' : 'Credit'

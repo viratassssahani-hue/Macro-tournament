@@ -264,9 +264,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     sessionStorage.removeItem('isAdminAuthenticated');
   };
 
-  const joinMatch = async (matchId: string, participantInputs: {ign: string, uid: string}[], entryFee: number) => {
-    if (!currentUser) return false;
-    if (currentUser.walletBalance < entryFee) return false;
+  const joinMatch = async (matchId: string, participantInputs: {ign: string, uid: string, slotNumber: number}[], entryFee: number) => {
+    if (!currentUser) throw new Error('You must be logged in to join');
+    if (currentUser.walletBalance < entryFee) throw new Error('Insufficient balance in your wallet');
 
     try {
       const matchDoc = doc(db, 'matches', matchId);
@@ -277,7 +277,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       const totalSeats = matchSnap.data()?.totalSeats || 0;
       
       if (joinedSeats + participantInputs.length > totalSeats) {
-        throw new Error('Not enough seats available');
+        throw new Error('This match is already full');
       }
 
       // Update user balance
@@ -304,26 +304,26 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       // Create participants
       for (let i = 0; i < participantInputs.length; i++) {
         const p = participantInputs[i];
-        // Ensure participant ID is unique and valid for the match
-        const participantId = i === 0 ? currentUser.id : `t${currentUser.id.slice(0, 5)}-${p.uid}`;
+        // Unique participant ID per match per user
+        const participantId = i === 0 ? currentUser.id : `${currentUser.id}_p${i}`;
         await setDoc(doc(db, 'matches', matchId, 'participants', participantId), {
           userId: i === 0 ? currentUser.id : participantId,
           ign: p.ign,
           uid: p.uid,
-          slotNumber: joinedSeats + i + 1,
+          slotNumber: p.slotNumber,
           createdAt: serverTimestamp()
         });
       }
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error('Join match failed:', e);
       handleFirestoreError(e, OperationType.WRITE, `matches/${matchId}/join`);
-      return false;
+      throw new Error(e.message || 'Failed to join match');
     }
   };
 
   const requestDeposit = async (amount: number, utr: string) => {
-    if (!currentUser) return false;
+    if (!currentUser) throw new Error('Must be logged in');
     
     try {
       const txId = `t${Date.now()}`;
@@ -336,20 +336,21 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         timestamp: new Date().toISOString()
       });
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      return false;
+      throw new Error(e.message || 'Failed to submit deposit request');
     }
   };
 
   const requestWithdrawal = async (amount: number, upiId: string) => {
-    if (!currentUser || currentUser.walletBalance < amount) return false;
+    if (!currentUser) throw new Error('Must be logged in');
+    if (currentUser.walletBalance < amount) throw new Error('Insufficient balance');
     
     try {
       await updateDoc(doc(db, 'users', currentUser.id), {
         walletBalance: currentUser.walletBalance - amount
       });
-
+      
       const txId = `t${Date.now()}`;
       await setDoc(doc(db, 'transactions', txId), {
         userId: currentUser.id,
@@ -360,9 +361,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         timestamp: new Date().toISOString()
       });
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      return false;
+      throw new Error(e.message || 'Failed to submit withdrawal request');
     }
   };
 
@@ -392,8 +393,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         status: 'rejected',
         reason
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      throw new Error(e.message || 'Failed to reject deposit');
     }
   };
 
@@ -404,8 +406,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         status: 'paid',
         reference: ref
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      throw new Error(e.message || 'Failed to mark as paid');
     }
   };
 
@@ -428,8 +431,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         timestamp: new Date().toISOString(),
         reason
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      throw new Error(e.message || 'Failed to apply penalty');
     }
   };
 
@@ -440,8 +444,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         roomId,
         roomPassword: password
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      throw new Error(e.message || 'Failed to publish room details');
     }
   };
 
@@ -464,8 +469,9 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         timestamp: new Date().toISOString(),
         reason
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      throw new Error(e.message || 'Failed to credit winnings');
     }
   };
 

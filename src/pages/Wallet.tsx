@@ -12,32 +12,32 @@ export default function Wallet() {
 
   if (!currentUser) return <div className="text-center text-white py-20">Please log in to view wallet.</div>;
 
-  const handleDeposit = (e: React.FormEvent) => {
+  const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (Number(amount) > 0 && reference.trim()) {
-      const success = requestDeposit(Number(amount), reference);
-      if (success) {
+      try {
+        await requestDeposit(Number(amount), reference);
         alert('Deposit request submitted. Waiting for admin approval.');
         setAmount('');
         setReference('');
         setActiveTab('history');
-      } else {
-        alert('This UTR has already been submitted.');
+      } catch (err: any) {
+        alert(err.message || 'Deposit failed');
       }
     }
   };
 
-  const handleWithdrawal = (e: React.FormEvent) => {
+  const handleWithdrawal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (Number(amount) >= 50 && reference.trim()) {
-      const success = requestWithdrawal(Number(amount), reference);
-      if (success) {
+      try {
+        await requestWithdrawal(Number(amount), reference);
         alert('Withdrawal request submitted.');
         setAmount('');
         setReference('');
         setActiveTab('history');
-      } else {
-        alert('Insufficient funds. Minimum withdrawal is ₹50.');
+      } catch (err: any) {
+        alert(err.message || 'Withdrawal failed');
       }
     }
   };
