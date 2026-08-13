@@ -15,9 +15,15 @@ export default function Profile() {
   const [saved, setSaved] = useState(false);
 
   // Calculate Total Earnings (only from 'winnings' type transactions)
-  const totalEarnings = transactions
-    .filter(t => t?.userId === currentUser?.id && t?.type === 'winnings' && t?.status === 'approved')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const winningTransactions = transactions.filter(t => t?.userId === currentUser?.id && t?.type === 'winnings' && t?.status === 'approved');
+  const totalEarnings = winningTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+  // Calculate Wins (Booyahs) - assuming admin records "Rank 1" in transaction reason
+  const totalWins = winningTransactions.filter(t => t.reason?.toLowerCase().includes('rank 1')).length;
+
+  // Match History
+  const matchHistory = matches.filter(m => m.participants.some(p => p.userId === currentUser.id));
+  const totalMatches = matchHistory.length;
 
   useEffect(() => {
     if (totalEarnings > 0) {
@@ -70,9 +76,6 @@ export default function Profile() {
     logoutUser();
     navigate('/');
   };
-
-  // Match History
-  const matchHistory = matches.filter(m => m.participants.some(p => p.userId === currentUser.id));
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -167,34 +170,55 @@ export default function Profile() {
         </motion.div>
       </div>
 
-      {/* Stats & History */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#0A0A0A] p-6 flex flex-col justify-center items-center text-center relative overflow-hidden"
+          className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#0A0A0A] p-6 text-center group hover:border-blue-500/30 transition-all duration-300"
         >
-          <div className="absolute -right-4 -bottom-4 opacity-10">
-            <Award className="w-32 h-32 text-yellow-500" />
+          <div className="mb-4 inline-flex p-3 rounded-xl bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
+            <Gamepad2 className="w-6 h-6" />
           </div>
-          <p className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-2 relative z-10">Total Earnings</p>
-          <motion.h2 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 10, delay: 0.4 }}
-            className="text-4xl font-bold text-yellow-500 tracking-tighter relative z-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]"
-          >
-            ₹{totalEarnings.toFixed(2)}
-          </motion.h2>
+          <p className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">Matches Played</p>
+          <h2 className="text-3xl font-bold text-white tracking-tighter">{totalMatches}</h2>
         </motion.div>
 
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="md:col-span-2 rounded-2xl border border-white/10 bg-[#121212] overflow-hidden flex flex-col"
+          className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#0A0A0A] p-6 text-center group hover:border-yellow-500/30 transition-all duration-300"
         >
+          <div className="mb-4 inline-flex p-3 rounded-xl bg-yellow-500/10 text-yellow-500 group-hover:scale-110 transition-transform">
+            <Trophy className="w-6 h-6" />
+          </div>
+          <p className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">Booyahs (Wins)</p>
+          <h2 className="text-3xl font-bold text-yellow-500 tracking-tighter drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">{totalWins}</h2>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#1a1a1a] to-[#0A0A0A] p-6 text-center group hover:border-green-500/30 transition-all duration-300"
+        >
+          <div className="mb-4 inline-flex p-3 rounded-xl bg-green-500/10 text-green-500 group-hover:scale-110 transition-transform">
+            <Award className="w-6 h-6" />
+          </div>
+          <p className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-1">Total Earnings</p>
+          <h2 className="text-3xl font-bold text-green-500 tracking-tighter drop-shadow-[0_0_10px_rgba(34,197,94,0.3)]">₹{totalEarnings.toFixed(2)}</h2>
+        </motion.div>
+      </div>
+
+      {/* Match History */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="rounded-2xl border border-white/10 bg-[#121212] overflow-hidden flex flex-col"
+      >
           <div className="p-6 border-b border-white/10 bg-white/5">
             <h3 className="text-lg font-bold text-white flex items-center gap-2">
               <History className="h-5 w-5 text-gray-400" />
@@ -236,6 +260,5 @@ export default function Profile() {
           </div>
         </motion.div>
       </div>
-    </div>
   );
 }
