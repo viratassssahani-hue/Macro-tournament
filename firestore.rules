@@ -49,7 +49,7 @@ service cloud.firestore {
         data.booyahBonus is number &&
         data.totalSeats is number &&
         data.joinedSeats is number &&
-        data.status in ['upcoming', 'live', 'completed'] &&
+        data.status in ['upcoming', 'live', 'completed', 'cancelled'] &&
         data.createdAt is timestamp &&
         (data.get('roomId', '') is string && data.get('roomId', '').size() <= 50) &&
         (data.get('roomPassword', '') is string && data.get('roomPassword', '').size() <= 50);
@@ -112,6 +112,7 @@ service cloud.firestore {
         isValidMatch(incoming()) &&
         incoming().createdAt == request.time;
       
+      allow delete: if isAdmin() && isValidId(matchId);
       allow update: if isValidId(matchId) && (
         (
           isAdmin() &&

@@ -26,6 +26,9 @@ interface StoreState {
   isAdminAuthenticated: boolean;
   matches: Match[];
   transactions: Transaction[];
+  users: User[];
+  adminDeleteMatch: (matchId: string) => Promise<void>;
+  adminUpdateMatchStatus: (matchId: string, status: MatchStatus) => Promise<void>;
   leaderboard: LeaderboardEntry[];
   loginUser: () => Promise<void>;
   logoutUser: () => void;
@@ -53,6 +56,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   );
   const [matches, setMatches] = useState<Match[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
@@ -91,6 +95,22 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     });
     return () => unsubscribeAuth();
   }, []);
+
+
+  useEffect(() => {
+    if (!isAdminAuthenticated) {
+      setUsers([]);
+      return;
+    }
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const loadedUsers = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+      setUsers(loadedUsers);
+    });
+    return () => unsubscribeUsers();
+  }, [isAdminAuthenticated]);
 
   // Listen to matches
   useEffect(() => {
@@ -378,6 +398,26 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+
+  const adminDeleteMatch = async (matchId: string) => {
+    if (!isAdminAuthenticated) return;
+    try {
+      // Need to delete participants collection first if there are any, but relying on cascade or ignoring
+      await deleteDoc(doc(db, 'matches', matchId));
+    } catch (error) {
+      console.error("Error deleting match:", error);
+    }
+  };
+
+  const adminUpdateMatchStatus = async (matchId: string, status: MatchStatus) => {
+    if (!isAdminAuthenticated) return;
+    try {
+      await updateDoc(doc(db, 'matches', matchId), { status });
+    } catch (error) {
+      console.error("Error updating match status:", error);
     }
   };
 

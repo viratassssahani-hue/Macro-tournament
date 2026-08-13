@@ -1,4 +1,4 @@
-export type MatchStatus = 'upcoming' | 'live' | 'completed';
+export type MatchStatus = 'upcoming' | 'live' | 'completed' | 'cancelled';
 export type MatchMode = 'Solo' | 'Duo' | 'Squad';
 
 export interface Participant {

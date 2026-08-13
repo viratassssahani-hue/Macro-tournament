@@ -6,13 +6,14 @@ import { MatchMode, Match } from '../types';
 
 export default function AdminDashboard() {
   const { 
-    isAdminAuthenticated, logoutAdmin, matches, transactions, 
+    isAdminAuthenticated, logoutAdmin, matches, transactions, leaderboard, users,
     adminCreateMatch, adminPublishRoom, adminCreditWinnings,
-    adminApproveDeposit, adminRejectDeposit, adminMarkPaid, adminPenalty
+    adminApproveDeposit, adminRejectDeposit, adminMarkPaid, adminPenalty,
+    adminDeleteMatch, adminUpdateMatchStatus
   } = useStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'matches' | 'results' | 'deposits' | 'withdrawals' | 'audit'>('matches');
+  const [activeTab, setActiveTab] = useState<'matches' | 'results' | 'deposits' | 'withdrawals' | 'audit' | 'users'>('matches');
 
   useEffect(() => {
     if (!isAdminAuthenticated) navigate('/admin');
@@ -41,7 +42,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col md:flex-row min-h-[calc(100vh-64px)]">
         {/* Sidebar Tabs */}
         <aside className="w-full md:w-64 border-r border-white/10 bg-[#121212] p-4 flex md:flex-col gap-2 overflow-x-auto">
-          {(['matches', 'results', 'deposits', 'withdrawals', 'audit'] as const).map(tab => (
+          {(['matches', 'results', 'deposits', 'withdrawals', 'audit', 'users'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -56,11 +57,12 @@ export default function AdminDashboard() {
 
         {/* Content Area */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {activeTab === 'matches' && <MatchCreator adminCreateMatch={adminCreateMatch} matches={matches} adminPublishRoom={adminPublishRoom} />}
+          {activeTab === 'matches' && <MatchCreator adminCreateMatch={adminCreateMatch} matches={matches} adminPublishRoom={adminPublishRoom} adminDeleteMatch={adminDeleteMatch} adminUpdateMatchStatus={adminUpdateMatchStatus} />}
           {activeTab === 'results' && <SpectatorResults matches={matches} adminCreditWinnings={adminCreditWinnings} />}
           {activeTab === 'deposits' && <PendingDeposits transactions={transactions} approve={adminApproveDeposit} reject={adminRejectDeposit} />}
           {activeTab === 'withdrawals' && <PendingWithdrawals transactions={transactions} markPaid={adminMarkPaid} />}
           {activeTab === 'audit' && <UserAudit adminPenalty={adminPenalty} />}
+          {activeTab === 'users' && <UserList users={users} />}
         </main>
       </div>
     </div>
@@ -69,7 +71,7 @@ export default function AdminDashboard() {
 
 // --- Sub Components ---
 
-function MatchCreator({ adminCreateMatch, matches, adminPublishRoom }: any) {
+function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDeleteMatch, adminUpdateMatchStatus }: any) {
   const [title, setTitle] = useState('');
   const [map, setMap] = useState('Bermuda');
   const [mode, setMode] = useState<MatchMode>('Solo');
@@ -277,6 +279,45 @@ function UserAudit({ adminPenalty }: any) {
         </div>
         <button type="submit" className="w-full bg-red-600 text-white font-bold py-2 rounded">Apply Transaction</button>
       </form>
+    </div>
+  );
+}
+
+
+function UserList({ users }: any) {
+  return (
+    <div className="space-y-4">
+      <h3 className="text-xl font-bold text-white mb-4">Registered Users ({users?.length || 0})</h3>
+      <div className="rounded-xl border border-white/10 bg-[#121212] overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-gray-400 border-b border-white/10 bg-[#0A0A0A]">
+            <tr>
+              <th className="p-4">Player</th>
+              <th className="p-4">IGN</th>
+              <th className="p-4">UID</th>
+              <th className="p-4">Wallet</th>
+              <th className="p-4">Joined At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users?.map((u: any) => (
+              <tr key={u.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                <td className="p-4 flex items-center gap-3">
+                  <img src={u.avatar} alt="" className="w-8 h-8 rounded-full bg-white/10" />
+                  <span className="font-medium text-white">{u.name}</span>
+                </td>
+                <td className="p-4 text-gray-300">{u.ign || '-'}</td>
+                <td className="p-4 text-gray-300">{u.uid || '-'}</td>
+                <td className="p-4 font-mono font-bold text-green-400">₹{u.walletBalance}</td>
+                <td className="p-4 text-gray-500">{u.createdAt ? new Date(u.createdAt.toDate?.() || u.createdAt).toLocaleDateString() : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {(!users || users.length === 0) && (
+          <div className="p-8 text-center text-gray-500">No users found.</div>
+        )}
+      </div>
     </div>
   );
 }
