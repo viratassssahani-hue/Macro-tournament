@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'matches' | 'results' | 'deposits' | 'withdrawals' | 'audit' | 'users'>('matches');
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
   
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -98,6 +99,8 @@ export default function AdminDashboard() {
               adminDeleteMatch={adminDeleteMatch} 
               adminUpdateMatchStatus={adminUpdateMatchStatus}
               showConfirm={showConfirm}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
             />
           )}
           {activeTab === 'results' && (
@@ -105,6 +108,8 @@ export default function AdminDashboard() {
               matches={matches} 
               adminCreditWinnings={adminCreditWinnings} 
               showConfirm={showConfirm}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
             />
           )}
           {activeTab === 'deposits' && (
@@ -113,6 +118,8 @@ export default function AdminDashboard() {
               approve={adminApproveDeposit} 
               reject={adminRejectDeposit} 
               showConfirm={showConfirm}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
             />
           )}
           {activeTab === 'withdrawals' && (
@@ -120,12 +127,16 @@ export default function AdminDashboard() {
               transactions={transactions} 
               markPaid={adminMarkPaid} 
               showConfirm={showConfirm}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
             />
           )}
           {activeTab === 'audit' && (
             <UserAudit 
               adminPenalty={adminPenalty} 
               showConfirm={showConfirm}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
             />
           )}
           {activeTab === 'users' && <UserList users={users} />}
@@ -148,7 +159,7 @@ export default function AdminDashboard() {
 
 // --- Sub Components ---
 
-function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDeleteMatch, adminUpdateMatchStatus, showConfirm }: any) {
+function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDeleteMatch, adminUpdateMatchStatus, showConfirm, isProcessing, setIsProcessing }: any) {
   const [title, setTitle] = useState('');
   const [map, setMap] = useState('Bermuda');
   const [mode, setMode] = useState<MatchMode>('Solo');
@@ -156,7 +167,6 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
   const [perKill, setPerKill] = useState(10);
   const [booyah, setBooyah] = useState(100);
   const [time, setTime] = useState('');
-  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,7 +333,7 @@ function MatchCreator({ adminCreateMatch, matches, adminPublishRoom, adminDelete
   );
 }
 
-function SpectatorResults({ matches, adminCreditWinnings, showConfirm }: any) {
+function SpectatorResults({ matches, adminCreditWinnings, showConfirm, isProcessing, setIsProcessing }: any) {
   const [selectedMatch, setSelectedMatch] = useState<string>('');
   
   const match = matches.find((m: Match) => m.id === selectedMatch);
@@ -386,7 +396,7 @@ function SpectatorResults({ matches, adminCreditWinnings, showConfirm }: any) {
   );
 }
 
-function PendingDeposits({ transactions, approve, reject, showConfirm }: any) {
+function PendingDeposits({ transactions, approve, reject, showConfirm, isProcessing, setIsProcessing }: any) {
   const pending = transactions.filter((t: any) => t.type === 'deposit' && t.status === 'pending');
   return (
     <div className="space-y-4">
@@ -444,7 +454,7 @@ function PendingDeposits({ transactions, approve, reject, showConfirm }: any) {
   );
 }
 
-function PendingWithdrawals({ transactions, markPaid, showConfirm }: any) {
+function PendingWithdrawals({ transactions, markPaid, showConfirm, isProcessing, setIsProcessing }: any) {
   const pending = transactions.filter((t: any) => t.type === 'withdrawal' && t.status === 'pending');
   return (
     <div className="space-y-4">
@@ -480,7 +490,7 @@ function PendingWithdrawals({ transactions, markPaid, showConfirm }: any) {
   );
 }
 
-function UserAudit({ adminPenalty, showConfirm }: any) {
+function UserAudit({ adminPenalty, showConfirm, isProcessing, setIsProcessing }: any) {
   const [uid, setUid] = useState('');
   const [amt, setAmt] = useState(0);
   const [reason, setReason] = useState('');
